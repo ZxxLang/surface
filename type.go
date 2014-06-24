@@ -1,5 +1,6 @@
 // Derived from Go's package reflect
 // --------------------------------------------------------------------------
+//
 // Copyright 2009 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -9,7 +10,6 @@
 package surface
 
 import (
-	"reflect"
 	"strconv"
 	"unsafe"
 )
@@ -45,10 +45,6 @@ const (
 	KStruct
 	KUnsafePointer
 )
-
-func (k Kind) String() string {
-	return reflect.Kind(k).String()
-}
 
 const (
 	kindMask       Kind = 0x7f
@@ -263,7 +259,10 @@ func (t *Type) IsNil() bool {
 
 func (t *Type) String() string {
 	if t == nil {
-		return "nil"
+		return ""
+	}
+	if t.string == nil {
+		return ""
 	}
 	return *t.string
 }
@@ -275,11 +274,17 @@ func (u *uncommonType) Name() string {
 	if u == nil {
 		return ""
 	}
+	if u.name == nil {
+		return ""
+	}
 	return *u.name
 }
 
 func (u *uncommonType) PkgPath() string {
 	if u == nil {
+		return ""
+	}
+	if u.pkgPath == nil {
 		return ""
 	}
 	return *u.pkgPath
@@ -326,8 +331,8 @@ func (u IMethod) Exported() bool {
 }
 
 func (u StructField) Name() string {
-	if u.name == nil {
-		return ""
+	if u.name == nil { // Embedded
+		return u.Type.Name()
 	}
 	return *u.name
 }
@@ -356,7 +361,7 @@ func (u StructField) HasTag() bool {
 }
 
 func TypeOf(i interface{}) *Type {
-	ei := *(*emptyInterface)(unsafe.Pointer(&i))
+	ei := *(*EmptyInterface)(unsafe.Pointer(&i))
 	return ei.Type
 }
 
@@ -373,23 +378,26 @@ func (t *Type) mustBe(expected Kind) {
 	}
 }
 
-// Array Chan Func Interface Map Ptr Slice Struct
+// t.Kind must be KArray
 func (t *Type) Array() *ArrayType {
 	t.mustBe(KArray)
 	return (*ArrayType)(unsafe.Pointer(t))
 }
 
+// t.Kind must be KChan
 func (t *Type) Chan() *ChanType {
 	t.mustBe(KChan)
 	return (*ChanType)(unsafe.Pointer(t))
 }
 
+// t.Kind must be KFunc
 func (t *Type) Func() *FuncType {
 	t.mustBe(KFunc)
 	return (*FuncType)(unsafe.Pointer(t))
 }
 
-func (t *Type) Interface() *InterfaceType {
+// t.Kind must be KInterface
+func (t *Type) Surface() *InterfaceType {
 	if t.Kind() == KPtr {
 		t = t.Ptr().Elem
 	}
@@ -397,21 +405,25 @@ func (t *Type) Interface() *InterfaceType {
 	return (*InterfaceType)(unsafe.Pointer(t))
 }
 
+// t.Kind must be KMap
 func (t *Type) Map() *MapType {
 	t.mustBe(KMap)
 	return (*MapType)(unsafe.Pointer(t))
 }
 
+// t.Kind must be KPtr
 func (t *Type) Ptr() *PtrType {
 	t.mustBe(KPtr)
 	return (*PtrType)(unsafe.Pointer(t))
 }
 
+// t.Kind must be KSlice
 func (t *Type) Slice() *SliceType {
 	t.mustBe(KSlice)
 	return (*SliceType)(unsafe.Pointer(t))
 }
 
+// t.Kind must be KStruct
 func (t *Type) Struct() *StructType {
 	t.mustBe(KStruct)
 	return (*StructType)(unsafe.Pointer(t))
@@ -419,6 +431,13 @@ func (t *Type) Struct() *StructType {
 
 func (t *StructType) NumField() int {
 	return len(t.Fields)
+}
+
+func (t *Type) Indirect() *Type {
+	if t.Kind() == KPtr {
+		return t.Ptr().Elem
+	}
+	return t
 }
 
 func (v *Type) Implements(t *InterfaceType) bool {
@@ -454,10 +473,4 @@ func (v *Type) Implements(t *InterfaceType) bool {
 		}
 	}
 	return false
-}
-func (v *Type) Indirect() *Type {
-	if v.Kind() == KPtr {
-		return v.Ptr().Elem
-	}
-	return v
 }

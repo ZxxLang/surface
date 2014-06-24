@@ -1,3 +1,12 @@
+// Derived from Go's package reflect
+// --------------------------------------------------------------------------
+//
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+//
+// Copyright 2014 The ZxxLang Authors. All rights reserved.
+
 package surface
 
 import (
@@ -149,7 +158,7 @@ func (v Value) Float64() float64 {
 		if v.flag&flagIndir != 0 {
 			return *(*float64)(v.val)
 		}
-		return *(*float64)(unsafe.Pointer(&v.val))
+		return *(*float64)(unsafe.Pointer(&v.sur.val))
 	}
 	panic(&ValueError{"rtype.Value.Float64", k})
 }

@@ -1,3 +1,7 @@
+// Copyright 2014 The ZxxLang Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package surface
 
 import (
@@ -6,52 +10,110 @@ import (
 	"go/ast"
 	"reflect"
 	"testing"
-	"unsafe"
 )
 
-func Iface(i interface{}) emptyInterface {
-	return *(*emptyInterface)(unsafe.Pointer(&i))
-}
 func TestType(t *testing.T) {
 	wt := want.T(t)
-	for _, s := range testType {
-		ei := Iface(s)
-		wt.NotNil(ei.Type)
-		//want.Printf("0x%x,\n", ei.Type.Hash)
-		//wt.True(ei.Type.Hash == testStructHash[i])
+	for i, s := range testType {
+		sv := ValueOf(s)
+		wt.NotNil(sv.Type)
+		want.Printf("0x%x,\n", sv.Type.Hash)
+		wt.True(sv.Type.Hash == testTypeHash[i])
+		rv := reflect.ValueOf(s)
+		rt := rv.Type()
+		st := sv.Type
+		wt.True(FromValue(rv).Type.Hash == testTypeHash[i])
+		wt.Equal(rt.Name(), st.Name())
+		wt.Equal(rt.String(), st.String())
+		wt.Equal(rt.PkgPath(), st.PkgPath())
 	}
 }
 
-func TestStruct(t *testing.T) {
+func TestStructAndFields(t *testing.T) {
 	wt := want.T(t)
 	for i, s := range testStruct {
-		ei := Iface(s)
-		wt.NotNil(ei.Type)
-		//want.Printf("0x%x,\n", ei.Type.Hash)
-		wt.True(ei.Type.Hash == testStructHash[i])
+		sv := ValueOf(s)
+		wt.NotNil(sv.Type)
+		st := sv.Type.Struct()
+
+		rv := reflect.ValueOf(s)
+		rt := rv.Type()
+
+		//want.Printf("0x%x,\n", sv.Type.Hash)
+		wt.True(sv.Type.Hash == testStructHash[i])
+		wt.True(FromValue(rv).Type.Hash == testStructHash[i])
+		wt.Equal(rt.Name(), sv.Type.Name())
+		wt.Equal(rt.String(), sv.Type.String())
+		wt.Equal(rt.PkgPath(), sv.Type.PkgPath())
+
+		wt.Equal(rt.NumField(), st.NumField())
+		wt.Equal(rv.Interface(), sv.Interface())
+
+		wt.Equal(rv.CanSet(), sv.CanSet())
+		wt.Equal(rv.CanAddr(), sv.CanAddr())
+		wt.Equal(rv.CanInterface(), sv.CanInterface())
+
+		v := sv.Struct()
+		for i := 0; i < st.NumField(); i++ {
+			rf := rt.Field(i)
+			sf := st.Fields[i]
+			wt.Equal(rf.Name, sf.Name(), i, " ", rt.String(), " ", sv.Type.String())
+			wt.Equal(rf.PkgPath, sf.PkgPath())
+			wt.Equal(rf.Type.Kind().String(), sf.Type.Kind().String())
+
+			rv := rv.Field(i)
+			sv := v.Field(i)
+			wt.Equal(rv.CanSet(), sv.CanSet())
+			wt.Equal(rv.CanAddr(), sv.CanAddr())
+			wt.Equal(rv.CanInterface(), sv.CanInterface())
+
+			if !rv.CanInterface() {
+				continue
+				t := rv.Type()
+				want.Printf("!CanInterface() \n\tPkgPath:%q\n\t   Name:%q\n\t String:%q\n",
+					t.PkgPath(), t.Name(), t.String())
+			}
+			wt.Equal(rv.Interface(), sv.Interface(),
+				"\nsv.IsIndir():    ", sv.IsIndir(),
+				"\nrt.String():             ", rt.String(),
+				"\nrf.Name:                 ", rf.Name,
+				"\nrf.PkgPath:              ", rf.PkgPath,
+				"\nrf.Type.Kind().String(): ", rf.Type.Kind().String(),
+			)
+		}
 	}
 }
 
 func TestBuiltinType(t *testing.T) {
 	wt := want.T(t)
 	for i, s := range testBuiltinType {
-		ei := Iface(s)
-		wt.NotNil(ei.Type)
-		//want.Printf("0x%x,\n", ei.Type.Hash)
-		wt.True(ei.Type.Hash == testBuiltinHash[i])
+		sv := ValueOf(s)
+		wt.NotNil(sv.Type)
+		//want.Printf("0x%x,\n", sv.Type.Hash)
+		wt.True(sv.Type.Hash == testBuiltinHash[i])
+		rv := reflect.ValueOf(s)
+		rt := rv.Type()
+		st := sv.Type
+		wt.True(FromValue(rv).Type.Hash == testBuiltinHash[i])
+		wt.Equal(rt.Name(), st.Name())
+		wt.Equal(rt.String(), st.String())
+		wt.Equal(rt.PkgPath(), st.PkgPath())
+
+		wt.Equal(rv.CanSet(), sv.CanSet())
+		wt.Equal(rv.CanAddr(), sv.CanAddr())
+		wt.Equal(rv.CanInterface(), sv.CanInterface())
 	}
 }
 
 var testType = [...]interface{}{
-	emptyInterface{},
+	EmptyInterface{},
 	Type{},
-	&emptyInterface{},
+	&EmptyInterface{},
 	&Type{},
 }
 
 var testTypeHash = [...]uint32{
-	0xad479737, 0xe576d264, 0x13865c38, 0x11521028,
-}
+	0x71774d96, 0x790a307b, 0x4a00045b, 0x17531429}
 
 var testBuiltinType = [...]interface{}{
 	true, false,
@@ -227,10 +289,21 @@ var testStructHash = [...]uint32{
 func TestFuncType(t *testing.T) {
 	wt := want.T(t)
 	for i, s := range testFuncType {
-		ei := Iface(s)
-		wt.NotNil(ei.Type)
-		//want.Printf("0x%x,\n", ei.Type.Hash)
-		wt.True(ei.Type.Hash == testFuncHash[i], i)
+		sv := ValueOf(s)
+		wt.NotNil(sv.Type)
+		//want.Printf("0x%x,\n", sv.Type.Hash)
+		wt.True(sv.Type.Hash == testFuncHash[i])
+		rv := reflect.ValueOf(s)
+		rt := rv.Type()
+		st := sv.Type
+		wt.True(FromValue(rv).Type.Hash == testFuncHash[i])
+		wt.Equal(rt.Name(), st.Name())
+		wt.Equal(rt.String(), st.String())
+		wt.Equal(rt.PkgPath(), st.PkgPath())
+
+		wt.Equal(rv.CanSet(), sv.CanSet())
+		wt.Equal(rv.CanAddr(), sv.CanAddr())
+		wt.Equal(rv.CanInterface(), sv.CanInterface())
 	}
 }
 
@@ -252,10 +325,20 @@ var testFuncHash = [...]uint32{
 func TestInterfaceType(t *testing.T) {
 	wt := want.T(t)
 	for i, s := range testInterfaceType {
-		ei := Iface(s)
-		wt.NotNil(ei.Type)
-		//want.Printf("0x%x,\n", ei.Type.Hash)
-		wt.True(ei.Type.Hash == testInterfaceHash[i], i)
+		sv := ValueOf(s)
+		wt.NotNil(sv.Type)
+		//want.Printf("0x%x,\n", sv.Type.Hash)
+		wt.True(sv.Type.Hash == testInterfaceHash[i])
+		rv := reflect.ValueOf(s)
+		rt := rv.Type()
+		st := sv.Type
+		wt.True(FromValue(rv).Type.Hash == testInterfaceHash[i])
+		wt.Equal(rt.Name(), st.Name())
+		wt.Equal(rt.String(), st.String())
+		wt.Equal(rt.PkgPath(), st.PkgPath())
+		wt.Equal(rv.CanSet(), sv.CanSet())
+		wt.Equal(rv.CanAddr(), sv.CanAddr())
+		wt.Equal(rv.CanInterface(), sv.CanInterface())
 	}
 }
 
@@ -297,9 +380,43 @@ func TestMethodType(t *testing.T) {
 
 	wt := want.T(t)
 	for i, s := range testMethodType {
-		ei := Iface(s)
-		wt.NotNil(ei.Type)
-		//want.Printf("0x%x,\n", ei.Type.Hash)
-		wt.True(ei.Type.Hash == testMethodHash[i], i)
+		sv := ValueOf(s)
+		wt.NotNil(sv.Type)
+		//want.Printf("0x%x,\n", sv.Type.Hash)
+		wt.True(sv.Type.Hash == testMethodHash[i])
+		rv := reflect.ValueOf(s)
+		rt := rv.Type()
+		st := sv.Type
+		wt.True(FromValue(rv).Type.Hash == testMethodHash[i])
+		wt.Equal(rt.Name(), st.Name())
+		wt.Equal(rt.String(), st.String())
+		wt.Equal(rt.PkgPath(), st.PkgPath())
+		wt.Equal(rv.CanSet(), sv.CanSet())
+		wt.Equal(rv.CanAddr(), sv.CanAddr())
+		wt.Equal(rv.CanInterface(), sv.CanInterface())
+	}
+}
+
+func TestMap(t *testing.T) {
+	wt := want.T(t)
+
+	m := map[string]interface{}{
+		"1":    1,
+		"2":    2,
+		"true": true,
+		"nil":  nil,
+		"func": TestMap,
+	}
+	sv := ValueOf(m).Map()
+	rv := reflect.ValueOf(m)
+	wt.Equal(rv.Len(), sv.Len())
+	wt.Equal(FromValue(rv).Map().Len(), sv.Len())
+	for _, key := range []string{"1", "2", "true", "nil", "func"} {
+		rv := rv.MapIndex(reflect.ValueOf(key))
+		sv := sv.Index(ValueOf(key))
+		wt.Equal(rv.CanSet(), sv.CanSet())
+		wt.Equal(rv.CanAddr(), sv.CanAddr())
+		wt.Equal(rv.CanInterface(), sv.CanInterface())
+		wt.Equal(rv.Interface(), sv.Interface())
 	}
 }
