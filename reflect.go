@@ -12,8 +12,9 @@ func (k Kind) String() string {
 }
 
 type reflectValue struct {
-	typ *Type //*rtype
-	val unsafe.Pointer
+	typ    *Type //*rtype
+	val    unsafe.Pointer
+	scalar uintptr // go1.3
 	flag
 }
 
@@ -23,6 +24,7 @@ func FromValue(v reflect.Value) Value {
 		rv.typ,
 		sur{
 			rv.val,
+			rv.scalar,
 			rv.flag,
 			unsafe.Pointer(rv.typ),
 		},

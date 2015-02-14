@@ -80,6 +80,12 @@ type sur struct {
 	// knows that val could be a pointer.
 	val unsafe.Pointer
 
+	// Non-pointer-valued data.  When the data is smaller
+	// than a word, it begins at the first byte (in the memory
+	// address sense) of this field.
+	// Valid when flagIndir is not set and typ.pointers() is false.
+	scalar uintptr // go1.3
+
 	// flag holds metadata about the value.
 	// The lowest bits are flag bits:
 	//	- flagRO: obtained via unexported field, so read-only

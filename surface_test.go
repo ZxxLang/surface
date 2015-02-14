@@ -46,7 +46,7 @@ func TestStructAndFields(t *testing.T) {
 		wt.Equal(rt.String(), sv.Type.String())
 		wt.Equal(rt.PkgPath(), sv.Type.PkgPath())
 
-		wt.Equal(rt.NumField(), st.NumField())
+		wt.Equal(rt.NumField(), st.NumField(), i, s)
 		wt.Equal(rv.Interface(), sv.Interface())
 
 		wt.Equal(rv.CanSet(), sv.CanSet())

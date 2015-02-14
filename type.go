@@ -67,6 +67,8 @@ type Type struct {
 	string        *string        // string form; unnecessary but undeniably useful
 	*uncommonType                // (relatively) uncommon fields
 	PtrToThis     *Type          // type for pointer to this type, if used in binary or has methods
+	// go 1.3
+	zero unsafe.Pointer // pointer to zero value
 }
 
 // uncommonType is present only for types with names or methods

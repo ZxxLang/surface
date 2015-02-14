@@ -128,7 +128,7 @@ func (v Value) Surface() Interface {
 	if typ != nil && typ.Size > ptrSize {
 		fl |= flagIndir
 	}
-	return Interface{ifacetype, sur{val, fl, v.typ}, typ}
+	return Interface{ifacetype, sur{val, v.scalar, fl, v.typ}, typ}
 }
 
 func (v Interface) InterfaceData() [2]uintptr {
@@ -155,7 +155,7 @@ func (v Ptr) Elem() Value {
 	fl := v.flag&flagRO | flagIndir | flagAddr
 	fl |= flag(typ.Kind() << flagKindShift)
 
-	return Value{typ, sur{val, fl, unsafe.Pointer(tt.Elem)}}
+	return Value{typ, sur{val, v.scalar, fl, unsafe.Pointer(tt.Elem)}}
 }
 
 // Indirect returns the value that v points to.
@@ -238,7 +238,7 @@ func (v Array) Index(i int) Value {
 		// Direct.  Discard leading bytes.
 		val = unsafe.Pointer(uintptr(v.val) >> (offset * 8))
 	}
-	return Value{typ, sur{val, fl, unsafe.Pointer(tt.Elem)}}
+	return Value{typ, sur{val, v.scalar, fl, unsafe.Pointer(tt.Elem)}}
 
 }
 func (v Slice) Index(i int) Value {
@@ -252,7 +252,7 @@ func (v Slice) Index(i int) Value {
 	typ := v.Type.Elem
 	fl |= flag(typ.Kind()) << flagKindShift
 	val := unsafe.Pointer(s.Data + uintptr(i)*typ.Size)
-	return Value{typ, sur{val, fl, unsafe.Pointer(v.Type.Elem)}}
+	return Value{typ, sur{val, v.scalar, fl, unsafe.Pointer(v.Type.Elem)}}
 }
 
 func (v Struct) Field(i int) Value {
@@ -286,7 +286,7 @@ func (v Struct) field(i int) Value {
 		val = unsafe.Pointer(uintptr(v.val) >> (field.offset * 8))
 	}
 
-	return Value{typ, sur{val, fl, unsafe.Pointer(field.Type)}}
+	return Value{typ, sur{val, v.scalar, fl, unsafe.Pointer(field.Type)}}
 }
 
 // FieldByIndex returns the nested field corresponding to index.
@@ -340,6 +340,7 @@ func ValueOf(i interface{}) Value {
 		typ,
 		sur{
 			unsafe.Pointer(eface.word),
+			uintptr(eface.word),
 			fl,
 			unsafe.Pointer(eface.Type),
 		},
